@@ -1034,25 +1034,27 @@ const initial = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').charAt(0).toLowe
 
 // ─── SOUND ───────────────────────────────────────────────────────────────────
 let audioCtx = null;
-function playCorrect() {
+function playTones(notes, type, volume, length) {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const t0 = audioCtx.currentTime;
-    [[659.25, 0], [987.77, 0.1]].forEach(([freq, delay]) => {   // E5 → B5 上揚雙音
+    notes.forEach(([freq, delay]) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'sine';
+      osc.type = type;
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.0001, t0 + delay);
-      gain.gain.exponentialRampToValueAtTime(0.25, t0 + delay + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + 0.35);
+      gain.gain.exponentialRampToValueAtTime(volume, t0 + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + length);
       osc.connect(gain).connect(audioCtx.destination);
       osc.start(t0 + delay);
-      osc.stop(t0 + delay + 0.4);
+      osc.stop(t0 + delay + length + 0.05);
     });
   } catch (e) {}
 }
+const playCorrect = () => playTones([[659.25, 0], [987.77, 0.1]], 'sine', 0.25, 0.35);   // E5 → B5 上揚雙音
+const playWrong = () => playTones([[220, 0], [155.56, 0.14]], 'triangle', 0.3, 0.3);     // A3 → D♯3 下沉雙音
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const STORE_KEY = 'taigi_state_v2';
@@ -1309,6 +1311,7 @@ function checkAnswer() {
     $('fb-title').textContent = '正確！';
   } else {
     quiz.wrong++; st.wrong++; quiz.lives--;
+    playWrong();
     fb.className = 'feedback-box wrong-fb';
     $('fb-title').className = 'feedback-title wrong-text';
     $('fb-title').textContent = '答錯了！';
