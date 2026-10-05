@@ -1032,6 +1032,28 @@ function shuffle(arr) {
 }
 const initial = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').charAt(0).toLowerCase();
 
+// ─── SOUND ───────────────────────────────────────────────────────────────────
+let audioCtx = null;
+function playCorrect() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t0 = audioCtx.currentTime;
+    [[659.25, 0], [987.77, 0.1]].forEach(([freq, delay]) => {   // E5 → B5 上揚雙音
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t0 + delay);
+      gain.gain.exponentialRampToValueAtTime(0.25, t0 + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + 0.35);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t0 + delay);
+      osc.stop(t0 + delay + 0.4);
+    });
+  } catch (e) {}
+}
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const STORE_KEY = 'taigi_state_v2';
 let state = freshState();
@@ -1281,6 +1303,7 @@ function checkAnswer() {
   fb.style.display = 'block';
   if (ok) {
     quiz.correct++; st.right++;
+    playCorrect();
     fb.className = 'feedback-box correct-fb';
     $('fb-title').className = 'feedback-title correct-text';
     $('fb-title').textContent = '正確！';
