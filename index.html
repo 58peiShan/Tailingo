@@ -1056,6 +1056,54 @@ function playTones(notes, type, volume, length) {
 const playCorrect = () => playTones([[659.25, 0], [987.77, 0.1]], 'sine', 0.25, 0.35);   // E5 → B5 上揚雙音
 const playWrong = () => playTones([[220, 0], [155.56, 0.14]], 'triangle', 0.3, 0.3);     // A3 → D♯3 下沉雙音
 
+// ─── CONFETTI ────────────────────────────────────────────────────────────────
+const confetti = (() => {
+  const COLORS = ['#58cc02', '#1cb0f6', '#ffc800', '#ff4b4b', '#9b59b6', '#ff9ad5'];
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let canvas = null, ctx = null, parts = [], raf = 0;
+
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    parts = parts.filter(p => p.life > 0 && p.y < canvas.height + 30);
+    parts.forEach(p => {
+      p.vy += 0.35; p.vx *= 0.99; p.vy *= 0.99;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, p.life / 25);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.rot * 2)) + 1);
+      ctx.restore();
+    });
+    raf = parts.length ? requestAnimationFrame(frame) : 0;
+    if (!raf) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 從 (ox, oy) 往上噴出彩帶
+  return function burst(ox, oy, count = 70) {
+    if (reduceMotion) return;
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:200';
+      document.body.appendChild(canvas);
+      ctx = canvas.getContext('2d');
+    }
+    canvas.width = innerWidth; canvas.height = innerHeight;
+    for (let i = 0; i < count; i++) {
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;   // 向上扇形
+      const speed = 8 + Math.random() * 9;
+      parts.push({
+        x: ox, y: oy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        w: 5 + Math.random() * 6, h: 8 + Math.random() * 10,
+        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)], life: 70 + Math.random() * 40,
+      });
+    }
+    if (!raf) raf = requestAnimationFrame(frame);
+  };
+})();
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const STORE_KEY = 'taigi_state_v2';
 let state = freshState();
@@ -1306,6 +1354,8 @@ function checkAnswer() {
   if (ok) {
     quiz.correct++; st.right++;
     playCorrect();
+    const r = $('btn-check').getBoundingClientRect();
+    confetti(r.left + r.width / 2, r.top);
     fb.className = 'feedback-box correct-fb';
     $('fb-title').className = 'feedback-title correct-text';
     $('fb-title').textContent = '正確！';
