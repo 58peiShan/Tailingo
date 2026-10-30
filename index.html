@@ -22,6 +22,8 @@
     --shadow: rgba(0,0,0,0.1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 全站尺寸皆為 rem，調整根字級即可整體縮放；預設比瀏覽器的 16px 稍大 */
+  html { font-size: 112.5%; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
     background: #f0f4f8;
@@ -43,7 +45,12 @@
     padding: 2rem 1.5rem;
     gap: 1.5rem;
   }
-  .home-logo { font-size: 5rem; }
+  .home-logo {
+    font-size: 5rem; line-height: 1.1; background: none; border: none; cursor: pointer;
+    font-family: inherit; transition: transform 0.15s;
+  }
+  .home-logo:hover { transform: scale(1.08) rotate(-6deg); }
+  .home-logo:active { transform: scale(0.95); }
   .home-title { color: white; font-size: 2rem; font-weight: 800; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
   .home-sub { color: rgba(255,255,255,0.85); font-size: 1rem; text-align: center; }
   .home-stats {
@@ -239,13 +246,52 @@
   .miss-list { width: 100%; background: var(--red-light); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.9rem; display: none; }
   .miss-list b { color: var(--red); }
   .miss-item { margin-top: 0.3rem; }
+
+  /* FONT SIZE SETTING */
+  .hud-pill.btn-font { border: none; color: white; font: inherit; font-weight: 700; cursor: pointer; margin-left: auto; }
+  .fs-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .fs-overlay.show { display: flex; }
+  .fs-panel { background: white; border-radius: 16px; padding: 1.25rem; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 1rem; }
+  .fs-title { font-size: 1.1rem; font-weight: 800; }
+  .fs-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+  .fs-opt {
+    border: 2px solid var(--border); border-radius: 12px; background: white; cursor: pointer;
+    padding: 0.6rem 0.2rem; font-weight: 700; color: var(--text); display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+  }
+  .fs-opt .fs-a { line-height: 1; }
+  .fs-opt .fs-label { font-size: 0.75rem; }
+  .fs-opt.selected { border-color: var(--blue); background: #ddf4ff; color: var(--blue-dark); }
+  .fs-preview { background: var(--gray-light); border-radius: 12px; padding: 0.75rem; text-align: center; }
+  .fs-preview-word { font-size: 1.6rem; font-weight: 800; }
+  .fs-preview-tailo { color: var(--blue); font-weight: 600; }
+
+  /* MASCOT PICKER */
+  .mascot-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.4rem; }
+  .mascot-opt {
+    border: 2px solid transparent; border-radius: 10px; background: var(--gray-light);
+    font-size: 1.6rem; line-height: 1; padding: 0.4rem 0; cursor: pointer; font-family: inherit;
+  }
+  .mascot-opt.selected { border-color: var(--blue); background: #ddf4ff; }
+  .mascot-custom { display: flex; gap: 0.5rem; }
+  .mascot-custom input {
+    flex: 1; min-width: 0; border: 2px solid var(--border); border-radius: 10px;
+    padding: 0.5rem 0.75rem; font-size: 1rem; font-family: inherit;
+  }
+  .mascot-custom .btn { width: auto; padding: 0.5rem 1rem; }
 </style>
+<script>
+  // 在畫面繪製前套用文字大小，避免閃動
+  try { var _fs = localStorage.getItem('taigi_font_size'); if (_fs) document.documentElement.style.fontSize = _fs + '%'; } catch (e) {}
+</script>
 </head>
 <body>
 
 <!-- HOME SCREEN -->
 <div id="home" class="screen active">
-  <div class="home-logo">🦜</div>
+  <button class="home-logo" id="home-logo" title="點一下換成你喜歡的 emoji" aria-label="更換吉祥物">🦜</button>
   <div class="home-title">Tâilingo</div>
   <div class="home-sub">教育部臺灣台語推薦用字 700字詞</div>
   <div class="home-stats">
@@ -257,7 +303,36 @@
   <div class="wod" id="wod"></div>
   <button class="btn btn-primary" id="btn-start">開始學習</button>
   <button class="btn btn-review" id="btn-review-home">複習到期字詞</button>
-  <button class="btn btn-outline" style="background:transparent;color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.5)" id="btn-reset">重置進度</button>
+  <div class="btn-row">
+    <button class="btn btn-outline" style="background:transparent;color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.5)" id="btn-font-home">Aa 文字大小</button>
+    <button class="btn btn-outline" style="background:transparent;color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.5)" id="btn-reset">重置進度</button>
+  </div>
+</div>
+
+<!-- FONT SIZE SETTING -->
+<div class="fs-overlay" id="fs-overlay">
+  <div class="fs-panel" role="dialog" aria-labelledby="fs-title">
+    <div class="fs-title" id="fs-title">文字大小</div>
+    <div class="fs-options" id="fs-options"></div>
+    <div class="fs-preview">
+      <div class="fs-preview-word">食飯</div>
+      <div class="fs-preview-tailo">tsia̍h-pn̄g</div>
+    </div>
+    <button class="btn btn-green" id="fs-done">完成</button>
+  </div>
+</div>
+
+<!-- MASCOT PICKER -->
+<div class="fs-overlay" id="mascot-overlay">
+  <div class="fs-panel" role="dialog" aria-labelledby="mascot-title">
+    <div class="fs-title" id="mascot-title">選擇你的吉祥物</div>
+    <div class="mascot-grid" id="mascot-grid"></div>
+    <div class="mascot-custom">
+      <input id="mascot-input" type="text" maxlength="16" placeholder="或貼上任何 emoji">
+      <button class="btn btn-green" id="mascot-use">使用</button>
+    </div>
+    <button class="btn btn-green" id="mascot-done">完成</button>
+  </div>
 </div>
 
 <!-- MENU SCREEN -->
@@ -269,6 +344,7 @@
       <div class="hud-pill">🔥 <span id="m-streak">0</span> 天</div>
       <div class="hud-pill">⭐ <span id="m-xp">0</span> XP</div>
       <div class="hud-pill">💎 <span id="m-learned">0</span>/700</div>
+      <button class="hud-pill btn-font" id="btn-font-menu" aria-label="文字大小">Aa</button>
     </div>
   </div>
   <div class="menu-review"><button class="btn btn-review" id="btn-review-menu">複習到期字詞</button></div>
@@ -1471,7 +1547,92 @@ function finishSession(finished) {
   showScreen('result');
 }
 
+// ─── FONT SIZE ───────────────────────────────────────────────────────────────
+// 與學習進度分開存，重置進度時不會被清掉
+const FONT_KEY = 'taigi_font_size';
+const FONT_SIZES = [
+  { pct: 100,   label: '小' },
+  { pct: 112.5, label: '中' },   // 預設
+  { pct: 125,   label: '大' },
+  { pct: 140,   label: '特大' },
+];
+const DEFAULT_FONT = 112.5;
+function currentFont() {
+  try { return parseFloat(localStorage.getItem(FONT_KEY)) || DEFAULT_FONT; } catch (e) { return DEFAULT_FONT; }
+}
+function setFont(pct) {
+  document.documentElement.style.fontSize = pct + '%';
+  try { localStorage.setItem(FONT_KEY, pct); } catch (e) {}
+  renderFontOptions();
+}
+function renderFontOptions() {
+  const cur = currentFont();
+  const box = $('fs-options');
+  box.innerHTML = '';
+  FONT_SIZES.forEach(({ pct, label }) => {
+    const b = document.createElement('button');
+    b.className = 'fs-opt' + (pct === cur ? ' selected' : '');
+    b.setAttribute('aria-pressed', pct === cur);
+    // 「A」用固定 px 顯示實際比例，不受目前設定影響
+    b.innerHTML = `<span class="fs-a" style="font-size:${16 * pct / 100}px">A</span><span class="fs-label">${label}</span>`;
+    b.addEventListener('click', () => setFont(pct));
+    box.appendChild(b);
+  });
+}
+function openFontSettings() { renderFontOptions(); $('fs-overlay').classList.add('show'); }
+function closeFontSettings() { $('fs-overlay').classList.remove('show'); }
+
+// ─── MASCOT ──────────────────────────────────────────────────────────────────
+// 首頁吉祥物 emoji，與學習進度分開存
+const MASCOT_KEY = 'taigi_mascot';
+const DEFAULT_MASCOT = '🦜';
+const MASCOTS = [
+  '🦜','🐦','🐧','🦉','🐤','🦆',
+  '🐱','🐶','🐰','🐻','🐼','🦊',
+  '🐯','🐸','🐢','🐟','🐙','🦄',
+  '🐉','🐝','🦋','🌸','🍵','🧋',
+];
+function currentMascot() {
+  try { return localStorage.getItem(MASCOT_KEY) || DEFAULT_MASCOT; } catch (e) { return DEFAULT_MASCOT; }
+}
+function setMascot(m) {
+  m = (m || '').trim();
+  if (!m) return;
+  // 只取第一個字素（含組合 emoji），避免整段文字塞進去
+  if (window.Intl && Intl.Segmenter) {
+    const first = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(m)[Symbol.iterator]().next().value;
+    if (first) m = first.segment;
+  }
+  try { localStorage.setItem(MASCOT_KEY, m); } catch (e) {}
+  $('home-logo').textContent = m;
+  renderMascotOptions();
+}
+function renderMascotOptions() {
+  const cur = currentMascot();
+  const grid = $('mascot-grid');
+  grid.innerHTML = '';
+  MASCOTS.forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'mascot-opt' + (m === cur ? ' selected' : '');
+    b.textContent = m;
+    b.addEventListener('click', () => setMascot(m));
+    grid.appendChild(b);
+  });
+}
+function openMascotPicker() { renderMascotOptions(); $('mascot-input').value = ''; $('mascot-overlay').classList.add('show'); }
+function closeMascotPicker() { $('mascot-overlay').classList.remove('show'); }
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
+$('home-logo').textContent = currentMascot();
+$('home-logo').addEventListener('click', openMascotPicker);
+$('mascot-done').addEventListener('click', closeMascotPicker);
+$('mascot-use').addEventListener('click', () => setMascot($('mascot-input').value));
+$('mascot-input').addEventListener('keydown', e => { if (e.key === 'Enter') setMascot($('mascot-input').value); });
+$('mascot-overlay').addEventListener('click', e => { if (e.target.id === 'mascot-overlay') closeMascotPicker(); });
+$('btn-font-home').addEventListener('click', openFontSettings);
+$('btn-font-menu').addEventListener('click', openFontSettings);
+$('fs-done').addEventListener('click', closeFontSettings);
+$('fs-overlay').addEventListener('click', e => { if (e.target.id === 'fs-overlay') closeFontSettings(); });
 $('btn-start').addEventListener('click', () => showScreen('menu'));
 $('btn-reset').addEventListener('click', resetProgress);
 $('btn-review-home').addEventListener('click', startReview);
