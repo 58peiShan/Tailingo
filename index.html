@@ -29,6 +29,7 @@
     background: #f0f4f8;
     color: var(--text);
     min-height: 100vh;
+    overflow-wrap: anywhere; /* 長拼音在大字級時可折行，不撐破版面 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -54,10 +55,10 @@
   .home-title { color: white; font-size: 2rem; font-weight: 800; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
   .home-sub { color: rgba(255,255,255,0.85); font-size: 1rem; text-align: center; }
   .home-stats {
-    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
-    background: rgba(255,255,255,0.15); border-radius: 12px; padding: 1rem 1.5rem;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; width: 100%;
+    background: rgba(255,255,255,0.15); border-radius: 12px; padding: 1rem 0.75rem;
   }
-  .stat-item { text-align: center; color: white; }
+  .stat-item { text-align: center; color: white; white-space: nowrap; }
   .stat-num { font-size: 1.5rem; font-weight: 800; }
   .stat-label { font-size: 0.75rem; opacity: 0.85; }
 
@@ -65,7 +66,7 @@
   .btn {
     border: none; border-radius: 12px; font-size: 1rem; font-weight: 700;
     cursor: pointer; padding: 0.9rem 2rem; transition: all 0.15s; width: 100%;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.02em; text-wrap: balance;
   }
   .btn:active { transform: translateY(2px); }
   .btn-primary { background: white; color: var(--green-dark); box-shadow: 0 4px 0 rgba(0,0,0,0.15); }
@@ -75,6 +76,10 @@
   .btn-green:not(:disabled):active { box-shadow: none; }
   .btn-outline { background: white; color: var(--green); border: 2px solid var(--green); }
   .btn-row { display: flex; gap: 0.75rem; width: 100%; }
+  .btn-sub {
+    font-size: 0.85rem; padding: 0.7rem 0.5rem; white-space: nowrap;
+    background: transparent; color: rgba(255,255,255,0.85); border: 2px solid rgba(255,255,255,0.5);
+  }
 
   /* MENU */
   #menu {
@@ -87,12 +92,12 @@
   .menu-header h2 { font-size: 1.3rem; font-weight: 800; }
   .menu-header p { font-size: 0.85rem; opacity: 0.85; margin-top: 0.25rem; }
   .menu-hud {
-    display: flex; gap: 1rem; margin-top: 0.75rem;
+    display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;
     font-size: 0.85rem; font-weight: 700;
   }
   .hud-pill {
     background: rgba(255,255,255,0.2); border-radius: 20px;
-    padding: 0.25rem 0.75rem; display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.25rem 0.75rem; display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;
   }
   .units-grid { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1; overflow-y: auto; }
   .unit-card {
@@ -142,7 +147,7 @@
   .btn-back:hover { background: var(--gray-light); }
   .progress-bar-wrap { flex: 1; background: var(--border); border-radius: 99px; height: 14px; overflow: hidden; }
   .progress-bar { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.4s; }
-  .hearts { font-size: 1.1rem; white-space: nowrap; }
+  .hearts { font-size: 1.1rem; font-weight: 800; color: var(--red); white-space: nowrap; }
 
   .quiz-body { flex: 1; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
   .quiz-type-badge {
@@ -269,7 +274,7 @@
   .fs-preview-tailo { color: var(--blue); font-weight: 600; }
 
   /* MASCOT PICKER */
-  .mascot-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.4rem; }
+  .mascot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.8rem, 1fr)); gap: 0.4rem; }
   .mascot-opt {
     border: 2px solid transparent; border-radius: 10px; background: var(--gray-light);
     font-size: 1.6rem; line-height: 1; padding: 0.4rem 0; cursor: pointer; font-family: inherit;
@@ -304,8 +309,8 @@
   <button class="btn btn-primary" id="btn-start">開始學習</button>
   <button class="btn btn-review" id="btn-review-home">複習到期字詞</button>
   <div class="btn-row">
-    <button class="btn btn-outline" style="background:transparent;color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.5)" id="btn-font-home">Aa 文字大小</button>
-    <button class="btn btn-outline" style="background:transparent;color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.5)" id="btn-reset">重置進度</button>
+    <button class="btn btn-sub" id="btn-font-home">Aa 文字大小</button>
+    <button class="btn btn-sub" id="btn-reset">重置進度</button>
   </div>
 </div>
 
@@ -1379,7 +1384,9 @@ function startSession(words, meta) {
 }
 
 function renderHearts() {
-  $('q-hearts').textContent = '❤️'.repeat(quiz.lives) + '🖤'.repeat(MAX_LIVES - quiz.lives);
+  // 用「❤️ 數字」顯示，字放大時也不會擠掉進度條
+  $('q-hearts').textContent = (quiz.lives > 0 ? '❤️ ' : '🖤 ') + quiz.lives;
+  $('q-hearts').setAttribute('aria-label', `剩下 ${quiz.lives} 顆心`);
 }
 
 function renderQuestion() {
